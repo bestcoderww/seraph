@@ -56,7 +56,7 @@ async def on_ready():
     host = platform.node()
     await bot.change_presence(
         status=discord.Status.online,
-        activity=discord.Activity(type=discord.ActivityType.watching, name=f"the sky · {host}")
+        activity=discord.Activity(type=discord.ActivityType.watching, name=f"the sky")
     )
     print(f"[ready] logged in as {bot.user} (id: {bot.user.id}) on {host}")
 
