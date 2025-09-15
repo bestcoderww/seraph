@@ -64,7 +64,7 @@ async def on_ready():
 from aiohttp import web
 
 async def handle_root(_request):
-    return web.Response(text="wingman bot: alive")
+    return web.Response(text="seraph: alive")
 
 async def run_webserver():
     port = int(os.environ.get("PORT", "8080"))  # Render provides $PORT

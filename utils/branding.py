@@ -13,5 +13,5 @@ def embed(title: str | None = None, desc: str | None = None, *, thumbnail_url: s
     )
     if thumbnail_url:
         e.set_thumbnail(url=thumbnail_url)
-    e.set_footer(text="wingman")
+    e.set_footer(text="seraph")
     return e
