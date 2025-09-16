@@ -12,11 +12,11 @@ class Info(commands.Cog):
     def dev_mentions(self) -> str:
         return ", ".join(f"<@{i}>" for i in self._dev_ids) if self._dev_ids else "unknown"
 
-    @app_commands.command(name="about", description="what is wingman?")
+    @app_commands.command(name="about", description="what is seraph?")
     async def about(self, interaction: discord.Interaction):
         e = embed(
-            "wingman",
-            "goofy ahh bot that i made."
+            "seraph",
+            "multipurpose discord bot."
         )
         e.add_field(name="developer", value=self.dev_mentions(), inline=True)
         e.add_field(name="latency", value=f"{self.bot.latency*1000:.0f} ms", inline=True)
