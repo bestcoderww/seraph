@@ -10,6 +10,7 @@ load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 DEBUG = os.getenv("DEBUG", "False") == "True"
 
+# keep your dev guild id if you want to do fast, *temporary* guild syncs during debugging
 GUILD_ID = 1400529660357644430
 GUILD = discord.Object(id=GUILD_ID)
 
@@ -24,10 +25,9 @@ intents.message_content = True
 intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
+# GLOBAL command (no guild decorator)
 @bot.tree.command(name="ping", description="check if the bot is alive")
-@app_commands.guilds(GUILD)
 async def ping(interaction: discord.Interaction):
-    # fast response keeps interactions happy
     await interaction.response.send_message("pong 🏓", ephemeral=False)
 
 async def setup_hook():
@@ -38,16 +38,25 @@ async def setup_hook():
             continue
         await bot.load_extension(f"cogs.{py.stem}")
 
-    # sync commands (guild for fast dev; global for prod)
-    if DEBUG:
-        bot.tree.copy_global_to(guild=GUILD)
-        synced = await bot.tree.sync(guild=GUILD)
-        print(f"✅ synced {len(synced)} guild commands to {GUILD_ID}")
-        print("🛠️ DEBUG mode — syncing only to dev server")
-    else:
-        synced = await bot.tree.sync()
-        print(f"🌐 synced {len(synced)} global commands")
-        print("🚀 PRODUCTION mode — syncing globally")
+    # sync once only, to avoid double registration during rolling restarts
+    if getattr(bot, "_synced_once", False):
+        return
+
+    # --- broom pass ---
+    # if you previously had guild-scoped commands, this clears them from the dev guild
+    # so only the global copies remain (prevents duplicates in that guild).
+    try:
+        bot.tree.clear_commands(guild=GUILD)
+        await bot.tree.sync(guild=GUILD)  # push the empty set to delete old guild cmds
+        print(f"🧹 cleared any old guild commands in {GUILD_ID}")
+    except Exception as e:
+        print(f"⚠️ guild clear/sync skipped or failed: {e}")
+
+    # --- GLOBAL SYNC ONLY ---
+    synced = await bot.tree.sync()
+    print(f"🌐 synced {len(synced)} global commands")
+
+    bot._synced_once = True  # guard flag
 
 bot.setup_hook = setup_hook
 
@@ -56,7 +65,7 @@ async def on_ready():
     host = platform.node()
     await bot.change_presence(
         status=discord.Status.online,
-        activity=discord.Activity(type=discord.ActivityType.watching, name=f"the sky")
+        activity=discord.Activity(type=discord.ActivityType.watching, name="the sky"),
     )
     print(f"[ready] logged in as {bot.user} (id: {bot.user.id}) on {host}")
 
@@ -66,10 +75,14 @@ from aiohttp import web
 async def handle_root(_request):
     return web.Response(text="seraph: alive")
 
+async def handle_healthz(_request):
+    return web.Response(text="ok")
+
 async def run_webserver():
     port = int(os.environ.get("PORT", "8080"))  # Render provides $PORT
     app = web.Application()
     app.router.add_get("/", handle_root)
+    app.router.add_get("/healthz", handle_healthz)  # optional health endpoint
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", port)
